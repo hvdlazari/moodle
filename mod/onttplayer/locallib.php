@@ -27,221 +27,7 @@ defined('MOODLE_INTERNAL') || die;
 
 require_once("$CFG->libdir/filelib.php");
 require_once("$CFG->libdir/resourcelib.php");
-require_once("$CFG->dirroot/mod/resource/lib.php");
-
-/**
- * Redirected to migrated resource if needed,
- * return if incorrect parameters specified
- * @param int $oldid
- * @param int $cmid
- * @return void
- */
-function resource_redirect_if_migrated($oldid, $cmid) {
-    global $DB, $CFG;
-
-    if ($oldid) {
-        $old = $DB->get_record('resource_old', array('oldid'=>$oldid));
-    } else {
-        $old = $DB->get_record('resource_old', array('cmid'=>$cmid));
-    }
-
-    if (!$old) {
-        return;
-    }
-
-    redirect("$CFG->wwwroot/mod/$old->newmodule/view.php?id=".$old->cmid);
-}
-
-/**
- * Display embedded resource file.
- * @param object $resource
- * @param object $cm
- * @param object $course
- * @param stored_file $file main file
- * @return does not return
- */
-function resource_display_embed($resource, $cm, $course, $file) {
-    global $CFG, $PAGE, $OUTPUT;
-
-    $clicktoopen = resource_get_clicktoopen($file, $resource->revision);
-
-    $context = context_module::instance($cm->id);
-    $path = '/'.$context->id.'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
-    $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, false);
-    $moodleurl = new moodle_url('/pluginfile.php' . $path);
-
-    $mimetype = $file->get_mimetype();
-    $title    = $resource->name;
-
-    $extension = resourcelib_get_extension($file->get_filename());
-
-    $mediamanager = core_media_manager::instance($PAGE);
-    $embedoptions = array(
-        core_media_manager::OPTION_TRUSTED => true,
-        core_media_manager::OPTION_BLOCK => true,
-    );
-
-    if (file_mimetype_in_typegroup($mimetype, 'web_image')) {  // It's an image
-        $code = resourcelib_embed_image($fullurl, $title);
-
-    } else if ($mimetype === 'application/pdf') {
-        // PDF document
-        $code = resourcelib_embed_pdf($fullurl, $title, $clicktoopen);
-
-    } else if ($mediamanager->can_embed_url($moodleurl, $embedoptions)) {
-        // Media (audio/video) file.
-        $code = $mediamanager->embed_url($moodleurl, $title, 0, 0, $embedoptions);
-
-    } else {
-        // We need a way to discover if we are loading remote docs inside an iframe.
-        $moodleurl->param('embed', 1);
-
-        // anything else - just try object tag enlarged as much as possible
-        $code = resourcelib_embed_general($moodleurl, $title, $clicktoopen, $mimetype);
-    }
-
-    resource_print_header($resource, $cm, $course);
-    resource_print_heading($resource, $cm, $course);
-
-    echo $code;
-
-    resource_print_intro($resource, $cm, $course);
-
-    echo $OUTPUT->footer();
-    die;
-}
-
-/**
- * Display resource frames.
- * @param object $resource
- * @param object $cm
- * @param object $course
- * @param stored_file $file main file
- * @return does not return
- */
-function resource_display_frame($resource, $cm, $course, $file) {
-    global $PAGE, $OUTPUT, $CFG;
-
-    $frame = optional_param('frameset', 'main', PARAM_ALPHA);
-
-    if ($frame === 'top') {
-        $PAGE->set_pagelayout('frametop');
-        resource_print_header($resource, $cm, $course);
-        resource_print_heading($resource, $cm, $course);
-        resource_print_intro($resource, $cm, $course);
-        echo $OUTPUT->footer();
-        die;
-
-    } else {
-        $config = get_config('resource');
-        $context = context_module::instance($cm->id);
-        $path = '/'.$context->id.'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
-        $fileurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, false);
-        $navurl = "$CFG->wwwroot/mod/resource/view.php?id=$cm->id&amp;frameset=top";
-        $title = strip_tags(format_string($course->shortname.': '.$resource->name));
-        $framesize = $config->framesize;
-        $contentframetitle = s(format_string($resource->name));
-        $modulename = s(get_string('modulename','resource'));
-        $dir = get_string('thisdirection', 'langconfig');
-
-        $file = <<<EOF
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd">
-<html dir="$dir">
-  <head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <title>$title</title>
-  </head>
-  <frameset rows="$framesize,*">
-    <frame src="$navurl" title="$modulename" />
-    <frame src="$fileurl" title="$contentframetitle" />
-  </frameset>
-</html>
-EOF;
-
-        @header('Content-Type: text/html; charset=utf-8');
-        echo $file;
-        die;
-    }
-}
-
-/**
- * Internal function - create click to open text with link.
- */
-function resource_get_clicktoopen($file, $revision, $extra='') {
-    global $CFG;
-
-    $filename = $file->get_filename();
-    $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
-    $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, false);
-
-    $string = get_string('clicktoopen2', 'resource', "<a href=\"$fullurl\" $extra>$filename</a>");
-
-    return $string;
-}
-
-/**
- * Internal function - create click to open text with link.
- */
-function resource_get_clicktodownload($file, $revision) {
-    global $CFG;
-
-    $filename = $file->get_filename();
-    $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
-    $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, true);
-
-    $string = get_string('clicktodownload', 'resource', "<a href=\"$fullurl\">$filename</a>");
-
-    return $string;
-}
-
-/**
- * Print resource info and workaround link when JS not available.
- * @param object $resource
- * @param object $cm
- * @param object $course
- * @param stored_file $file main file
- * @return does not return
- */
-function resource_print_workaround($resource, $cm, $course, $file) {
-    global $CFG, $OUTPUT;
-
-    resource_print_header($resource, $cm, $course);
-    resource_print_heading($resource, $cm, $course, true);
-    resource_print_intro($resource, $cm, $course, true);
-
-    $resource->mainfile = $file->get_filename();
-    echo '<div class="resourceworkaround">';
-    switch (resource_get_final_display_type($resource)) {
-        case RESOURCELIB_DISPLAY_POPUP:
-            $path = '/'.$file->get_contextid().'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
-            $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, false);
-            $options = empty($resource->displayoptions) ? array() : unserialize($resource->displayoptions);
-            $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
-            $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
-            $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
-            $extra = "onclick=\"window.open('$fullurl', '', '$wh'); return false;\"";
-            echo resource_get_clicktoopen($file, $resource->revision, $extra);
-            break;
-
-        case RESOURCELIB_DISPLAY_NEW:
-            $extra = 'onclick="this.target=\'_blank\'"';
-            echo resource_get_clicktoopen($file, $resource->revision, $extra);
-            break;
-
-        case RESOURCELIB_DISPLAY_DOWNLOAD:
-            echo resource_get_clicktodownload($file, $resource->revision);
-            break;
-
-        case RESOURCELIB_DISPLAY_OPEN:
-        default:
-            echo resource_get_clicktoopen($file, $resource->revision);
-            break;
-    }
-    echo '</div>';
-
-    echo $OUTPUT->footer();
-    die;
-}
+require_once("$CFG->dirroot/mod/onttplayer/lib.php");
 
 /**
  * Print resource header.
@@ -250,12 +36,12 @@ function resource_print_workaround($resource, $cm, $course, $file) {
  * @param object $course
  * @return void
  */
-function resource_print_header($resource, $cm, $course) {
+function onttplayer_print_header($onttplayer, $cm, $course) {
     global $PAGE, $OUTPUT;
 
-    $PAGE->set_title($course->shortname.': '.$resource->name);
+    $PAGE->set_title($course->shortname.': '.$onttplayer->name);
     $PAGE->set_heading($course->fullname);
-    $PAGE->set_activity_record($resource);
+    $PAGE->set_activity_record($onttplayer);
     echo $OUTPUT->header();
 }
 
@@ -267,9 +53,9 @@ function resource_print_header($resource, $cm, $course) {
  * @param bool $notused This variable is no longer used
  * @return void
  */
-function resource_print_heading($resource, $cm, $course, $notused = false) {
+function onttplayer_print_heading($onttplayer, $cm, $course, $notused = false) {
     global $OUTPUT;
-    echo $OUTPUT->heading(format_string($resource->name), 2);
+    echo $OUTPUT->heading(format_string($onttplayer->name), 2);
 }
 
 
