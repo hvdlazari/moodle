@@ -12,3 +12,5 @@ $string['modulename_help'] = 'The OnTT Player module enables users to input OnTT
 $string['modulename_link'] = 'mod/onttplayer/view';
 $string['modulenameplural'] = 'OnTT Players';
 $string['pluginname'] = 'OnTT Player';
+$string['token'] = 'Token';
+$string['token_desc'] = 'Token OnTT Player';
