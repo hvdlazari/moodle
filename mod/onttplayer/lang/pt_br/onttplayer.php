@@ -7,6 +7,9 @@
  * @copyright  2018 VC Intelligence {@link http://vcgroupweb.com}
  */
 
+$string['button:add_video'] = 'Adicionar Vídeo';
+$string['button:library_videos'] = 'Biblioteca de Vídeos';
+$string['form:header:videos'] = 'Vídeos';
 $string['modulename'] = 'OnTT Player';
 $string['modulename_help'] = 'O m&oacute;dulo OnTT Player permite que os usu&aacute;rios adicionem os v&iacute;&shy;deos da OnTT na sala de aula';
 $string['modulename_link'] = 'mod/onttplayer/view';

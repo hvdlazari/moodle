@@ -40,12 +40,8 @@ class mod_onttplayer_mod_form extends moodleform_mod {
         $element->setAttributes($attributes);
 
         //-------------------------------------------------------
-        $mform->addElement('header', 'video', 'Vídeos');        
-        $mform->addElement('button', 'intro', 'Adicionar Vídeo');
-        $mform->addElement('button', 'intro', 'Biblioteca de Vídeos');
-
-        $mform->registerNoSubmitButton('updatecourseformat');
-        $mform->addElement('submit', 'updatecourseformat', get_string('courseformatudpate'));
+        $mform->addElement('header', 'video', get_string('form:header:videos','mod_onttplayer'));
+        $mform->addElement('button', 'library_videos', get_string('button:library_videos','mod_onttplayer'));
 
         $mform->addElement('hidden', 'addcourseformatoptionshere');
         $mform->setType('addcourseformatoptionshere', PARAM_BOOL);
