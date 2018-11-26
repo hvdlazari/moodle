@@ -1,0 +1,16 @@
+<div class="row">
+    <div class="col-12"> 
+        <div class="card">
+            <ul class="list-group list-group-flush">
+                {{#categories}}
+                    <li class="list-group-item">
+                    	<a href="{{url}}">{{{name}}}</a>
+                    	{{#actions}}
+                            <a href="{{url}}" title={{title}}>{{{icon}}}</a>
+                    	{{/actions}}
+                    </li>
+                {{/categories}}
+            </ul>
+        </div>
+    </div>
+</div>    
